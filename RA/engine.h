@@ -32,8 +32,7 @@ public slots:
     // Functions
     int GetData();
     void DrawSpectogramFinished();
-    int ReadWavFile(); // Reads in data from wav file
-    void SearchAudio(); // Performs fft
+    void SearchAudio();
     void exportVideo();
     void exportTrims();
     void exportMutes();
