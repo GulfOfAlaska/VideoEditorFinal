@@ -52,7 +52,7 @@
 #ifndef SNDFILE_HH
 #define SNDFILE_HH
 
-#include <libsndfile/include/sndfile.h>
+#include <sndfile.h>
 
 #include <string>
 #include <new> // for std::nothrow

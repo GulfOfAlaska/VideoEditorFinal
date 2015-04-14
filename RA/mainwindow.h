@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include "libsndfile/include/sndfile.hh"
 #include "datastorage.h"
-#include <fftw/fftw3.h>
+#include "fftw/fftw3.h"
 #include <QMediaPlayer>
 
 namespace Ui {
