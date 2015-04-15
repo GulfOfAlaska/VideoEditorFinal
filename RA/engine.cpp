@@ -24,7 +24,6 @@ Engine::Engine()
 int Engine::GetData()
 {
     Engine::ConvertToWav(m_filepath);
-    Engine::ReadWavFile();
     emit finished();
     return 0;
 }
@@ -36,6 +35,17 @@ void Engine::DrawSpectogramFinished()
 
 int Engine::ConvertToWav(QString filepath)
 {
+    QString output;
+
+    if(m_mainOrSecondary==1)
+    {
+        output = "MainInput.wav";
+    }
+    else
+    {
+        output = "SecondaryInput.wav";
+    }
+
     /* Use QProcess to execute the cmd syntax:
     ** "C:/FFmpeg/bin/ffmpeg.exe -y -i input output.wav"
     ** -y means to over-write the output
@@ -50,16 +60,13 @@ int Engine::ConvertToWav(QString filepath)
     ** When conversion process finishes, read the output wav file
     ** Connect the signal and slot before the process starts
     */
-    proc->start("C:/FFmpeg/bin/ffmpeg.exe",QStringList()<<"-y"<<"-i"<<m_filepath<<"input.wav");
+    proc->start("C:/FFmpeg/bin/ffmpeg.exe",QStringList()<<"-y"<<"-i"<<m_filepath<<output);
     proc->waitForFinished(-1);
     emit processUpdate("Done extracting audio");
     emit readFinished();
     qDebug()<<"done reading";
     return 0;
 }
-
-
-
 
 
 QString Engine::GetRandomString(int length)
@@ -342,7 +349,6 @@ void Engine::undoInsertVideo(int join_list_index)
         concatenateVideo("undoJoinA.mp4","undoJoinB.mp4","undonejoinResult.mp4");
     }
 
-
     /* Decrease timing of all trims after insert start_time */
     m_datastorage->increaseTrimTime(duration_to_reduce,after_this_time);
     /* Decrease timing of all joins after insert start_time */
@@ -365,14 +371,24 @@ int Engine::numDigits(int num)
 
 void Engine::SearchAudio()
 {
-    emit processUpdate("Conversion ended, reading audio file.");
+    emit processUpdate("Search started");
+    emit processUpdate("Processing secondary audio");
 
-    /* Open the WAV file with libsnfile sf_open */
+    /* Variables */
+    int window_size;
+    SNDFILE *sf; // Pointer to input.wav
+    SF_INFO info; // Struct that stores info about input.wav
+    int num_items,seekable,f,sr,c; // Stores info about input.wav; f = frames, sr = sample rate, c = channels
+    double audio_duration;
+    double *temp_buf; // Stores wav data read by libsnfile (stereo)
+    double *sec_audio_sampledata_buffer; // Stores wav data read by libsnfile
+    double *main_audio_sampledata_buffer; // Stores wav data read by libsnfile
+
+    /* Open the secondary WAV file with libsnfile sf_open */
     info.format = 0;
-    sf = sf_open("input.wav",SFM_READ,&info);
+    sf = sf_open("SecondaryInput.wav",SFM_READ,&info);
     if (sf == NULL)
     {
-        qDebug()<< "Failed to open file";
         emit processUpdate("Failed to open file");
         exit(-1);
     }
@@ -393,6 +409,79 @@ void Engine::SearchAudio()
     emit processUpdate("Seekable = " + QString::number(info.seekable));
     emit processUpdate("Audio Length(seconds) = " + QString::number(audio_duration));
 
+    /* Allocate space for the data to be read */
+    window_size = f;
+    temp_buf = (double *) malloc(num_items*sizeof(double));
+    sec_audio_sampledata_buffer = (double *) malloc(window_size*sizeof(double));
 
 
+    /* Read data from wav file */
+    sf_read_double(sf,temp_buf,num_items);
+
+    /* Free memory */
+    sf_close(sf);
+
+    /* Average left and right channels */
+    int temp_buf_index=0;
+    for (int i = 0; i < num_items; i += 2)
+    {
+        double average = 0.0;
+        for (int j = 0; j < 2; ++j)
+        {
+            average+=temp_buf[i+j];
+        }
+        average = average/2.0;
+        sec_audio_sampledata_buffer[temp_buf_index]=average;
+        temp_buf_index++;
+    }
+
+    free(temp_buf);
+    emit processUpdate("Done processing secondary audio");
+
+
+    /* Open the main WAV file with libsnfile sf_open */
+    info.format = 0;
+    sf = sf_open("MainInput.wav",SFM_READ,&info);
+    if (sf == NULL)
+    {
+        emit processUpdate("Failed to open file");
+        exit(-1);
+    }
+
+    /* Initialise variables */
+    f = info.frames;
+    sr = info.samplerate;
+    c = info.channels;
+    num_items = f*c;
+    seekable = info.seekable;
+    audio_duration = f/double(sr); // in seconds
+
+    /* Tells mainwindow to update the console with these outputs */
+    emit processUpdate("Frames = " + QString::number(info.frames));
+    emit processUpdate("SampleRate = " + QString::number(info.samplerate));
+    emit processUpdate("Channels = " + QString::number(info.channels));
+    emit processUpdate("NumItems = " + QString::number(num_items));
+    emit processUpdate("Seekable = " + QString::number(info.seekable));
+    emit processUpdate("Audio Length(seconds) = " + QString::number(audio_duration));
+
+    /* Allocate space to read main audio data */
+    temp_buf = (double *) malloc(window_size*sizeof(double));
+    main_audio_sampledata_buffer = (double *) malloc(window_size*sizeof(double));
+
+    /* First read in a segment the size of the secondary audio (window_size) */
+    int count;
+    int index=0;
+    count=sf_read_double(sf,temp_buf,window_size);
+
+    /* Average out values */
+    double average = 0.0;
+    for (int i = 0; i < count; i += 2)
+    {
+        average+=temp_buf[i];
+        average+=temp_buf[i+1];
+        average = average/2.0;
+        main_audio_sampledata_buffer[index]=average;
+        //out<<average<<" ";
+        index++;
+    }
 }

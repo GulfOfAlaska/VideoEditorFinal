@@ -19,8 +19,8 @@
 
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_Engine_t {
-    QByteArrayData data[24];
-    char stringdata[273];
+    QByteArrayData data[23];
+    char stringdata[261];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -48,11 +48,10 @@ QT_MOC_LITERAL(15, 160, 8), // "finished"
 QT_MOC_LITERAL(16, 169, 12), // "readFinished"
 QT_MOC_LITERAL(17, 182, 7), // "GetData"
 QT_MOC_LITERAL(18, 190, 22), // "DrawSpectogramFinished"
-QT_MOC_LITERAL(19, 213, 11), // "ReadWavFile"
-QT_MOC_LITERAL(20, 225, 11), // "SearchAudio"
-QT_MOC_LITERAL(21, 237, 11), // "exportVideo"
-QT_MOC_LITERAL(22, 249, 11), // "exportTrims"
-QT_MOC_LITERAL(23, 261, 11) // "exportMutes"
+QT_MOC_LITERAL(19, 213, 11), // "SearchAudio"
+QT_MOC_LITERAL(20, 225, 11), // "exportVideo"
+QT_MOC_LITERAL(21, 237, 11), // "exportTrims"
+QT_MOC_LITERAL(22, 249, 11) // "exportMutes"
 
     },
     "Engine\0processUpdate\0\0text\0mainSpgmUpdate\0"
@@ -60,9 +59,8 @@ QT_MOC_LITERAL(23, 261, 11) // "exportMutes"
     "secondarySpgmUpdate\0mainSWUpdate\0"
     "double*\0buf\0corrUpdate\0updateAudioSearchTable\0"
     "started\0finished\0readFinished\0GetData\0"
-    "DrawSpectogramFinished\0ReadWavFile\0"
-    "SearchAudio\0exportVideo\0exportTrims\0"
-    "exportMutes"
+    "DrawSpectogramFinished\0SearchAudio\0"
+    "exportVideo\0exportTrims\0exportMutes"
 };
 #undef QT_MOC_LITERAL
 
@@ -72,7 +70,7 @@ static const uint qt_meta_data_Engine[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-      16,   14, // methods
+      15,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -80,24 +78,23 @@ static const uint qt_meta_data_Engine[] = {
        9,       // signalCount
 
  // signals: name, argc, parameters, tag, flags
-       1,    1,   94,    2, 0x06 /* Public */,
-       4,    2,   97,    2, 0x06 /* Public */,
-       8,    2,  102,    2, 0x06 /* Public */,
-       9,    2,  107,    2, 0x06 /* Public */,
-      12,    2,  112,    2, 0x06 /* Public */,
-      13,    0,  117,    2, 0x06 /* Public */,
-      14,    0,  118,    2, 0x06 /* Public */,
-      15,    0,  119,    2, 0x06 /* Public */,
-      16,    0,  120,    2, 0x06 /* Public */,
+       1,    1,   89,    2, 0x06 /* Public */,
+       4,    2,   92,    2, 0x06 /* Public */,
+       8,    2,   97,    2, 0x06 /* Public */,
+       9,    2,  102,    2, 0x06 /* Public */,
+      12,    2,  107,    2, 0x06 /* Public */,
+      13,    0,  112,    2, 0x06 /* Public */,
+      14,    0,  113,    2, 0x06 /* Public */,
+      15,    0,  114,    2, 0x06 /* Public */,
+      16,    0,  115,    2, 0x06 /* Public */,
 
  // slots: name, argc, parameters, tag, flags
-      17,    0,  121,    2, 0x0a /* Public */,
-      18,    0,  122,    2, 0x0a /* Public */,
-      19,    0,  123,    2, 0x0a /* Public */,
-      20,    0,  124,    2, 0x0a /* Public */,
-      21,    0,  125,    2, 0x0a /* Public */,
-      22,    0,  126,    2, 0x0a /* Public */,
-      23,    0,  127,    2, 0x0a /* Public */,
+      17,    0,  116,    2, 0x0a /* Public */,
+      18,    0,  117,    2, 0x0a /* Public */,
+      19,    0,  118,    2, 0x0a /* Public */,
+      20,    0,  119,    2, 0x0a /* Public */,
+      21,    0,  120,    2, 0x0a /* Public */,
+      22,    0,  121,    2, 0x0a /* Public */,
 
  // signals: parameters
     QMetaType::Void, QMetaType::QString,    3,
@@ -113,7 +110,6 @@ static const uint qt_meta_data_Engine[] = {
  // slots: parameters
     QMetaType::Int,
     QMetaType::Void,
-    QMetaType::Int,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -139,12 +135,10 @@ void Engine::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void
         case 9: { int _r = _t->GetData();
             if (_a[0]) *reinterpret_cast< int*>(_a[0]) = _r; }  break;
         case 10: _t->DrawSpectogramFinished(); break;
-        case 11: { int _r = _t->ReadWavFile();
-            if (_a[0]) *reinterpret_cast< int*>(_a[0]) = _r; }  break;
-        case 12: _t->SearchAudio(); break;
-        case 13: _t->exportVideo(); break;
-        case 14: _t->exportTrims(); break;
-        case 15: _t->exportMutes(); break;
+        case 11: _t->SearchAudio(); break;
+        case 12: _t->exportVideo(); break;
+        case 13: _t->exportTrims(); break;
+        case 14: _t->exportMutes(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -232,13 +226,13 @@ int Engine::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 16)
+        if (_id < 15)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 16;
+        _id -= 15;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 16)
+        if (_id < 15)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 16;
+        _id -= 15;
     }
     return _id;
 }

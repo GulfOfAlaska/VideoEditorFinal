@@ -52,15 +52,7 @@ signals:
 
 private:
     // Members
-    QString m_filepath; // Stores filepath of video/audio
-    SNDFILE *sf; // Pointer to input.wav
-    SF_INFO info; // Struct that stores info about input.wav
-    int num_frames, num_items, seekable,f,sr,c; // Stores info about input.wav; f = frames, sr = sample rate, c = channels
-    double audio_duration;
-    double *temp_buf; // Stores wav data read by libsnfile (stereo)
-    double *audio_sampledata_buffer; // Stores wav data read by libsnfile
-    std::ofstream out; // Output data to text file (Just for testing)
-    std::ofstream out2; // Output data to text file (Just for testing)
+    QString m_filepath; // Stores filepath of video/audio 
     fftw_complex *fftout;
     fftw_complex *fftout_secondary;
     fftw_plan p_secondary;
