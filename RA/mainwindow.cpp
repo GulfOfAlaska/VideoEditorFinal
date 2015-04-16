@@ -657,6 +657,7 @@ void MainWindow::on_pushButton_2_clicked()
     int start_duration_millisec = start_hr*(1000*60*60) + start_min*(1000*60) + start_sec*(1000)+ start_milisec;
 
     ui->seekBar->setSliderPosition(start_duration_millisec);
+    vplayer->setPosition(start_duration_millisec);
 }
 
 void MainWindow::on_pushButton_clicked()
@@ -694,7 +695,7 @@ void MainWindow::previewStop(qint64 position)
     if(position>=m_audio_preview_end)
     {
 
-        vplayer->pause();
+        vplayer->stop();
     }
 
 }
