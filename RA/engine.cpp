@@ -378,6 +378,7 @@ void Engine::SearchAudio()
 
     /* Variables */
     int window_size;
+
     SNDFILE *sf; // Pointer to input.wav
     SF_INFO info; // Struct that stores info about input.wav
     int num_items,seekable,f,sr,c; // Stores info about input.wav; f = frames, sr = sample rate, c = channels
@@ -412,9 +413,9 @@ void Engine::SearchAudio()
     emit processUpdate("Audio Length(seconds) = " + QString::number(audio_duration));
 
     /* Allocate space for the data to be read */
-    window_size = f;
+    window_size = num_items;
     temp_buf = (double *) malloc(num_items*sizeof(double));
-    sec_audio_sampledata_buffer = (double *) malloc(window_size*sizeof(double));
+    sec_audio_sampledata_buffer = (double *) malloc((window_size/2)*sizeof(double));
 
 
     /* Read data from wav file */
@@ -467,20 +468,29 @@ void Engine::SearchAudio()
     emit processUpdate("Audio Length(seconds) = " + QString::number(audio_duration));
 
     /* Read in size of segment */
-    int search_size = window_size;
+    int search_size = window_size; // frames * channels
+    int time_shift = sr/2;
 
     /* Allocate space to read main audio data */
     temp_buf = (double *) malloc(search_size*sizeof(double)); // allocate window size first
-    main_audio_sampledata_buffer = (double *) malloc(window_size*sizeof(double));
+    main_audio_sampledata_buffer = (double *) malloc((window_size/2)*sizeof(double));
 
     /* First read in a segment the size of the secondary audio (window_size) */
     int num_read=0;
     int seg_num = 0;
 
-    while (num_items-num_read>search_size)
+    qDebug()<<"search size: "<<search_size;
+    qDebug()<<"no main frames: "<<f;
+
+    while (num_items-num_read>=search_size)
     {
+
         /* Read audio data into temp_buf */
-        num_read+=(sf_read_double(sf,temp_buf,search_size));
+        int items_read=(sf_read_double(sf,temp_buf,search_size));
+        num_read+=items_read;
+
+        qDebug()<<"search size: "<<search_size;
+        qDebug()<<"items_read: "<<items_read;
 
         /* Check if its the first segment */
         if(seg_num==0)
@@ -488,7 +498,7 @@ void Engine::SearchAudio()
             /* Average out values */
             int index=0;
             double average = 0.0;
-            for (int i = 0; i < num_read; i += 2)
+            for (int i = 0; i < items_read; i += 2)
             {
                 average+=temp_buf[i];
                 average+=temp_buf[i+1];
@@ -499,6 +509,112 @@ void Engine::SearchAudio()
             }
 
             /* Perform cross correlation */
+            alglib::real_1d_array sec_signal;
+            sec_signal.setcontent(window_size/2,sec_audio_sampledata_buffer);
+
+            alglib::real_1d_array main_signal;
+            main_signal.setcontent(window_size/2,main_audio_sampledata_buffer);
+
+            alglib::real_1d_array corrResult;
+            corrResult.setlength((window_size)-2);
+            alglib::corrr1d(main_signal, window_size/2, sec_signal, window_size/2, corrResult);
+
+            /* Get max value of correlation results */
+            double max=0.0;
+            int maxCrossCorrelationIndex = 0;
+            for(int i=0;i<corrResult.length();i++)
+            {
+                if(corrResult[i]> max)
+                {
+                    maxCrossCorrelationIndex=i;
+                    max = corrResult[i];
+                }
+            }
+
+            /* Calculate the mean of the two series x[], y[] */
+            double mean_main = 0;
+            double mean_secondary = 0;
+            for (int i=0;i<window_size/2;i++) {
+                mean_main += main_signal[i];
+                mean_secondary += sec_signal[i];
+            }
+            mean_main/= search_size;
+            mean_secondary /= search_size;
+
+            /* Calculate the denominator */
+            double sx = 0;
+            double sy = 0;
+            for (int i=0;i<window_size/2;i++) {
+                sx += (main_signal[i] - mean_main) * (main_signal[i] - mean_main);
+                sy += (sec_signal[i] - mean_secondary) * (sec_signal[i] - mean_secondary);
+            }
+            double denom = sqrt(sx*sy);
+
+            /* Calcualte the coefficient */
+            double coefficient = max/denom;
+
+            /* If not part of segment & coefficient below criteria, carry on searching */
+            /* If part of segment &  coefficient below criteria, end segment & save end timing as last searched time
+                        * And update search table */
+            qDebug()<<"coefficient: "<<coefficient;
+
+
+            /* Free temp_buf */
+            free(temp_buf);
+
+            /* If there are stuffs left to search */
+            if(num_items-search_size>0)
+            {
+                /* Change search size to 1/2 sec (samplerate/2) */
+                if(num_items-search_size>time_shift)
+                {
+                    search_size=time_shift;
+                }
+                else
+                {
+                    search_size = num_items-search_size;
+                }
+
+                /* Reallocate size of temp_buf */
+                temp_buf = (double *) malloc(search_size*sizeof(double));
+            }
+        }
+        else
+        {
+            /* Shift main_audio_sampledata_buffer by time_shift towards the left */
+            for(int i=0;i<((window_size/2)-time_shift);i++)
+            {
+                main_audio_sampledata_buffer[i]=main_audio_sampledata_buffer[i+time_shift];
+            }
+
+            /* Read audio data into temp_buf */
+            int items_read=(sf_read_double(sf,temp_buf,search_size));
+            num_read+=items_read;
+
+            /* Average out values in temp_buf */
+            int index=0;
+            double average = 0.0;
+            temp_buf_frames = (double *) malloc(search_size/2*sizeof(double));
+
+            for (int i = 0; i < items_read; i += 2)
+            {
+                average+=temp_buf[i];
+                average+=temp_buf[i+1];
+                average = average/2.0;
+                temp_buf_frames[index]=average;
+                //out<<average<<" ";
+                index++;
+            }
+
+            /* Insert temp_buf into main_audio_sampledata_buffer */
+            temp_buf_index=0;
+            for(int i=(window_size-time_shift);i<window_size;i++)
+            {
+                main_audio_sampledata_buffer[i]=temp_buf_frames[temp_buf_index];
+                temp_buf_index++;
+            }
+            /* Perform cross correlation */
+
             alglib::real_1d_array sec_signal;
             sec_signal.setcontent(search_size,sec_audio_sampledata_buffer);
 
@@ -545,40 +661,8 @@ void Engine::SearchAudio()
 
             /* If not part of segment & coefficient below criteria, carry on searching */
             /* If part of segment &  coefficient below criteria, end segment & save end timing as last searched time
-                        * And update search table */
+                                    * And update search table */
             qDebug()<<"coefficient: "<<coefficient;
-
-
-            /* Free temp_buf */
-            free(temp_buf);
-
-            /* If there are stuffs left to search */
-            if(num_items-search_size>0)
-            {
-                /* Change search size to 1/2 sec (samplerate/2) */
-                if(num_items-search_size>(sr/2))
-                {
-                    search_size=sr/2;
-                }
-                else
-                {
-                    search_size = num_items-search_size;
-                }
-
-                /* Reallocate size of temp_buf */
-                temp_buf = (double *) malloc(search_size*sizeof(double));
-            }
-        }
-        else
-        {
-            /* Shift main_audio_sampledata_buffer by sr/2 values left */
-            for(int i=0;i<window_size-(sr/2);i++)
-            {
-
-            }
-            /* Read audio data into temp_buf */
-            /* Insert temp_buf into main_audio_sampledata_buffer */
-            /* Perform cross correlation */
 
         }
         seg_num++;
