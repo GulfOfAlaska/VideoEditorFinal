@@ -469,7 +469,7 @@ void Engine::SearchAudio()
 
     /* Read in size of segment */
     int search_size = window_size; // frames * channels
-    int time_shift = sr/2;
+    int time_shift = sr;
 
     /* Allocate space to read main audio data */
     temp_buf = (double *) malloc(search_size*sizeof(double)); // allocate window size first
@@ -479,22 +479,22 @@ void Engine::SearchAudio()
     int num_read=0;
     int seg_num = 0;
 
-    qDebug()<<"search size: "<<search_size;
-    qDebug()<<"no main frames: "<<f;
-
     while (num_items-num_read>=search_size)
     {
 
-        /* Read audio data into temp_buf */
-        int items_read=(sf_read_double(sf,temp_buf,search_size));
-        num_read+=items_read;
-
-        qDebug()<<"search size: "<<search_size;
-        qDebug()<<"items_read: "<<items_read;
 
         /* Check if its the first segment */
         if(seg_num==0)
         {
+            /* Read audio data into temp_buf */
+            int items_read=(sf_read_double(sf,temp_buf,search_size));
+            num_read+=items_read;
+
+            qDebug()<<"search size1: "<<search_size;
+            qDebug()<<"items_read1: "<<items_read;
+            qDebug()<<"num_read1: "<<num_read;
+
+
             /* Average out values */
             int index=0;
             double average = 0.0;
@@ -582,19 +582,26 @@ void Engine::SearchAudio()
         else
         {
             /* Shift main_audio_sampledata_buffer by time_shift towards the left */
-            for(int i=0;i<((window_size/2)-time_shift);i++)
+            for(int i=0;i<((window_size/2)-(time_shift/2));i++)
             {
-                main_audio_sampledata_buffer[i]=main_audio_sampledata_buffer[i+time_shift];
+                main_audio_sampledata_buffer[i]=main_audio_sampledata_buffer[i+(time_shift/2)];
             }
 
             /* Read audio data into temp_buf */
             int items_read=(sf_read_double(sf,temp_buf,search_size));
             num_read+=items_read;
 
+
+            qDebug()<<"search size2: "<<search_size;
+            qDebug()<<"items_read2: "<<items_read;
+            qDebug()<<"num_read2: "<<num_read;
+            qDebug()<<"segment number"<<seg_num;
+
+
             /* Average out values in temp_buf */
             int index=0;
             double average = 0.0;
-            temp_buf_frames = (double *) malloc(search_size/2*sizeof(double));
+            double *temp_buf_frames = (double *) malloc(search_size/2*sizeof(double));
 
             for (int i = 0; i < items_read; i += 2)
             {
@@ -606,24 +613,27 @@ void Engine::SearchAudio()
                 index++;
             }
 
-            /* Insert temp_buf into main_audio_sampledata_buffer */
+            /* Insert temp_buf_frames into main_audio_sampledata_buffer */
             temp_buf_index=0;
-            for(int i=(window_size-time_shift);i<window_size;i++)
+            for(int i=((window_size/2)-(time_shift/2));(i<window_size/2);i++)
             {
                 main_audio_sampledata_buffer[i]=temp_buf_frames[temp_buf_index];
                 temp_buf_index++;
             }
+
+            free(temp_buf_frames);
+
             /* Perform cross correlation */
 
             alglib::real_1d_array sec_signal;
-            sec_signal.setcontent(search_size,sec_audio_sampledata_buffer);
+            sec_signal.setcontent(window_size/2,sec_audio_sampledata_buffer);
 
             alglib::real_1d_array main_signal;
-            main_signal.setcontent(search_size,main_audio_sampledata_buffer);
+            main_signal.setcontent(window_size/2,main_audio_sampledata_buffer);
 
             alglib::real_1d_array corrResult;
             corrResult.setlength((search_size*2)-2);
-            alglib::corrr1d(main_signal, search_size, sec_signal, search_size, corrResult);
+            alglib::corrr1d(main_signal, window_size/2, sec_signal, window_size/2, corrResult);
 
             /* Get max value of correlation results */
             double max=0.0;
@@ -640,17 +650,17 @@ void Engine::SearchAudio()
             /* Calculate the mean of the two series x[], y[] */
             double mean_main = 0;
             double mean_secondary = 0;
-            for (int i=0;i<search_size;i++) {
+            for (int i=0;i<window_size/2;i++) {
                 mean_main += main_signal[i];
                 mean_secondary += sec_signal[i];
             }
-            mean_main/= search_size;
-            mean_secondary /= search_size;
+            mean_main/= window_size/2;
+            mean_secondary /= window_size/2;
 
             /* Calculate the denominator */
             double sx = 0;
             double sy = 0;
-            for (int i=0;i<search_size;i++) {
+            for (int i=0;i<window_size/2;i++) {
                 sx += (main_signal[i] - mean_main) * (main_signal[i] - mean_main);
                 sy += (sec_signal[i] - mean_secondary) * (sec_signal[i] - mean_secondary);
             }
@@ -667,4 +677,8 @@ void Engine::SearchAudio()
         }
         seg_num++;
     }
+
+    free(temp_buf);
+    free(main_audio_sampledata_buffer);
+    free(sec_audio_sampledata_buffer);
 }
