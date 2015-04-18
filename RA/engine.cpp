@@ -646,7 +646,7 @@ void Engine::SearchAudio()
                     max = corrResult[i];
                 }
             }
-
+            max=corrResult[0];
             /* Calculate the mean of the two series x[], y[] */
             double mean_main = 0;
             double mean_secondary = 0;
