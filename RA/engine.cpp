@@ -301,8 +301,14 @@ void Engine::concatenateVideo(QString start_video, QString end_video, QString ou
     cutProc->waitForFinished(-1);
 }
 
-void Engine::insertVideo(QString start_time_text, int start_time, int clip_duration, QString clip_filepath)
+void Engine::insertVideo()
 {
+    QString start_time_text = m_insert_start_time_text;
+    int start_time = m_insert_start_time;
+    int clip_duration = m_insert_clip_duration;
+    QString clip_filepath = m_insert_clip_filepath;
+
+
     qDebug()<<"entered insert: "<<m_filepath;
     int main_video_duration = m_datastorage->getMainVideoDuration();
     int hr = main_video_duration/(1000*60*60);
@@ -325,19 +331,18 @@ void Engine::insertVideo(QString start_time_text, int start_time, int clip_durat
     if(start_time==0)
     {
         /* Concatenate c with b (clip d)*/
-        concatenateVideo("insertClip.mp4","insertClipB.mp4","joinResult.mp4");
+        concatenateVideo("insertClip.mp4","insertClipB.mp4",QString::number(m_insert_number)+"joinResult.mp4");
     }
     if(start_time == main_video_duration)
     {
         /* Concatenate b with clip (clip d)*/
-        concatenateVideo("insertClipB.mp4","insertClip.mp4","joinResult.mp4");
+        concatenateVideo("insertClipB.mp4","insertClip.mp4",QString::number(m_insert_number)+"joinResult.mp4");
     }
     if(start_time!=0 && start_time!=main_video_duration)
     {
         /* Concatenate c with b (clip d)*/
-        concatenateVideo("insertClipC.mp4","insertClipB.mp4","joinResult.mp4");
+        concatenateVideo("insertClipC.mp4","insertClipB.mp4",QString::number(m_insert_number)+"joinResult.mp4");
     }
-
 
     /* Increase timing of all trims after insert start_time */
     m_datastorage->increaseTrimTime(clip_duration,start_time);
@@ -345,9 +350,11 @@ void Engine::insertVideo(QString start_time_text, int start_time, int clip_durat
     m_datastorage->increaseJoinTime(clip_duration,start_time);
     /* Increase timing of all mutes after insert start_time */
     m_datastorage->increaseMuteTime(clip_duration,start_time);
+
+    emit insertFinished();
 }
 
-void Engine::undoInsertVideo(int join_list_index)
+void Engine::undoInsertVideo()
 {
     std::vector <trimDetail*> join_list = m_datastorage->getJoinList();
     int duration_to_reduce = join_list[join_list_index]->getDuration()*(-1);
@@ -356,7 +363,7 @@ void Engine::undoInsertVideo(int join_list_index)
     int min = (main_video_duration/(1000*60))%60;
     int sec = (main_video_duration/(1000))%60;
     int milisec = main_video_duration % 1000;
-    int after_this_time = join_list[join_list_index]->getStartTime();
+    int after_this_time = join_list[join_list.size()-1]->getStartTime();
     QString main_video_duration_text = QString::number(hr)+":"+QString::number(min)+":"+QString::number(sec)+"."+QString::number(milisec);
     QString start_time_to_cut = join_list[join_list_index]->getStartTimeText();
     QString end_time_to_cut = join_list[join_list_index]->getEndTimeText();

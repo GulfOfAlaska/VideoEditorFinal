@@ -38,7 +38,7 @@ public:
     }
 
     // Functions
-    void undoInsertVideo(int join_list_index);
+    void undoInsertVideo();
 
 public slots:
     // Functions

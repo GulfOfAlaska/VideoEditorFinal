@@ -27,6 +27,7 @@ public slots:
     void updateMainSWLabel(double *buf, int num_items);
     void updateCrossCorrelationLabel(double *buf, int num_items);
     void updateAudioSearchList();
+    void initInsertVideo();
 
 private slots:
     void on_actionOpen_triggered();
@@ -84,6 +85,7 @@ private:
     int m_audio_preview_start;
     int m_audio_preview_end;
     int m_selected_mute_detail_index;
+    int m_insert_number;
     QString m_join_video_filepath;
 };
 

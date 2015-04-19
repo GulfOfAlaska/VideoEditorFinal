@@ -21,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
     vplayer = new QMediaPlayer;
     aplayer = new QMediaPlayer;
     joinPreviewVplayer = new QMediaPlayer;
+    m_insert_number=0;
 }
 
 MainWindow::~MainWindow()
@@ -548,18 +549,27 @@ void MainWindow::on_insertVideo_clicked()
     trim_detail->setDuration(joinPreviewVplayer->duration());
     m_datastorage->addJoinDetails(trim_detail);
 
-    Engine*Eng =  new Engine(m_main_filepath,1,m_datastorage);
-    Eng->insertVideo(start_time_text,start_duration_millisec,joinPreviewVplayer->duration(),m_join_video_filepath);
+    Engine*Eng =  new Engine(m_main_filepath,m_datastorage,m_insert_number, start_time_text,start_duration_millisec,joinPreviewVplayer->duration(),m_join_video_filepath);
+    QThread * insert_vid_th = new QThread();
+    QObject::connect(insert_vid_th,SIGNAL(started()),Eng,SLOT(insertVideo()));
+    QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
+    QObject::connect(Eng, SIGNAL(insertFinished()),this, SLOT(initInsertVideo()));
+    Eng->moveToThread(insert_vid_th);
+    insert_vid_th->start();
+}
+
+void MainWindow::initInsertVideo()
+{
     updateJoinListTable();
     updateTrimListTable();
     updateAudioSearchList();
     updateMuteListTable();
 
     qDebug()<<"switching main";
-    m_main_filepath = "joinResult.mp4";
+    m_main_filepath = QString::number(m_insert_number)+"joinResult.mp4";
 
     /* Create an engine thread */
-    Eng =  new Engine(m_main_filepath,1,m_datastorage);
+    Engine*Eng =  new Engine(m_main_filepath,1,m_datastorage);
     QThread * get_audio_data_th = new QThread();
     QObject::connect(get_audio_data_th,SIGNAL(started()),Eng,SLOT(GetData()));
     QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
@@ -567,6 +577,7 @@ void MainWindow::on_insertVideo_clicked()
     QObject::connect(Eng, SIGNAL(readFinished()),this, SLOT(initMainVideo()));
     Eng->moveToThread(get_audio_data_th);
     get_audio_data_th->start();
+    m_insert_number++;
 }
 
 void MainWindow::on_joinListTable_cellClicked(int row, int column)
@@ -577,7 +588,7 @@ void MainWindow::on_joinListTable_cellClicked(int row, int column)
 void MainWindow::on_insertVideoUndo_clicked()
 {
     Engine*Eng =  new Engine(m_main_filepath,1,m_datastorage);
-    Eng->undoInsertVideo(m_selected_join_detail_index);
+    Eng->undoInsertVideo();
 
     updateJoinListTable();
     updateTrimListTable();
