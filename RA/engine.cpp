@@ -108,6 +108,8 @@ void Engine::exportTrims()
     int milisec = main_video_duration % 1000;
     QString main_video_duration_text = QString::number(hr)+":"+QString::number(min)+":"+QString::number(sec)+"."+QString::number(milisec);
     qDebug()<<"total trims: "<<total_trims;
+    bool cut_from_start = false;
+    int main_export_num = 0;
     while(total_trims>0)
     {
         /* Calculate remaining trims */
@@ -115,20 +117,40 @@ void Engine::exportTrims()
 
         /* Get start and end of trimmed part */
         QString curStartText = trim_list[trim_index]->getStartTimeText();
+        int curStartTime = trim_list[trim_index]->getStartTime();
         QString curEndText = trim_list[trim_index]->getEndTimeText();
         int curEnd = trim_list[trim_index]->getEndTime();
+
 
         qDebug()<<"previousEndTime: "<<prevEnd;
 
         /* Cut from prevEnd to curStart */
         if(first_cut==true)
         {
-            cutVideo(prevEndText,curStartText,"mainExport.mp4");
+            if(curStartTime==0)
+            {
+                cut_from_start=true;
+                qDebug()<<"cut from start";
+            }
+            else
+            {
+                cutVideo(prevEndText,curStartText,QString::number(main_export_num)+"mainTrimExport.mp4");
+            }
         }
         else
         {
-            cutVideo(prevEndText,curStartText,"secExport.mp4");
-            concatenateVideo("mainExport.mp4","secExport.mp4","mainExport.mp4");
+            if(cut_from_start==true)
+            {
+                qDebug()<<"cut from start true";
+                cutVideo(prevEndText,curStartText,QString::number(main_export_num)+"mainTrimExport.mp4");
+                cut_from_start=false;
+            }
+            else
+            {
+                cutVideo(prevEndText,curStartText,"secTrimExport.mp4");
+                concatenateVideo(QString::number(main_export_num)+"mainTrimExport.mp4","secTrimExport.mp4",QString::number(main_export_num+1)+"mainTrimExport.mp4");
+                main_export_num++;
+            }
         }
 
         total_trims-=1;
@@ -139,14 +161,29 @@ void Engine::exportTrims()
     }
 
     /* Concatenate with end of video */
-    if(prevEnd!=main_video_duration  && trim_list.size()>0 )
+    if(prevEnd!=main_video_duration  && trim_list.size()>1 )
     {
-        cutVideo(prevEndText,main_video_duration_text,"secExport.mp4");
-        concatenateVideo("mainExport.mp4","secExport.mp4","finalProduct.mp4");
+        cutVideo(prevEndText,main_video_duration_text,"secTrimExport.mp4");
+        concatenateVideo(QString::number(main_export_num)+"mainTrimExport.mp4","secTrimExport.mp4","finalProduct.mp4");
         m_filepath="finalProduct.mp4";
     }
 
+    if(prevEnd!=main_video_duration  && trim_list.size()==1 && cut_from_start==true )
+    {
+        cutVideo(prevEndText,main_video_duration_text,"finalProduct.mp4");
+    }
 
+    /* Take into account trims that reach the end of the video */
+    if(prevEnd==main_video_duration  && trim_list.size()>0)
+    {
+        QProcess * proc = new QProcess();
+        /* Connect signal finished to slot ReadWaveFile()
+        ** When conversion process finishes, read the output wav file
+        ** Connect the signal and slot before the process starts
+        */
+        proc->start("C:/FFmpeg/bin/ffmpeg.exe",QStringList()<<"-y"<<"-i"<<QString::number(main_export_num)+"mainTrimExport.mp4"<<"finalProduct.mp4");
+        proc->waitForFinished(-1);
+    }
 }
 
 void Engine::exportMutes()
@@ -243,7 +280,7 @@ void Engine::cutVideo(QString start_time, QString end_time, QString output_file)
 
 void Engine::concatenateVideo(QString start_video, QString end_video, QString output_file)
 {
-    qDebug()<<"concatenating";
+    qDebug()<<"concatenating "<<start_video<<end_video;
     qDebug()<<"output: "<<output_file;
     /* concatenate the cut clip with the main export clip
     echo "file 'clip1.mkv'" > concat.txt
@@ -285,12 +322,12 @@ void Engine::insertVideo(QString start_time_text, int start_time, int clip_durat
     cutVideo(start_time_text,main_video_duration_text,"insertClipB.mp4");
     /* Concatenate a with inserted clip (clip c) */
     concatenateVideo("insertClipA.mp4","insertClip.mp4","insertClipC.mp4");
-    if(start_time=0)
+    if(start_time==0)
     {
         /* Concatenate c with b (clip d)*/
         concatenateVideo("insertClip.mp4","insertClipB.mp4","joinResult.mp4");
     }
-    if(start_time = main_video_duration)
+    if(start_time == main_video_duration)
     {
         /* Concatenate b with clip (clip d)*/
         concatenateVideo("insertClipB.mp4","insertClip.mp4","joinResult.mp4");

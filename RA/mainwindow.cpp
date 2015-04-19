@@ -555,6 +555,7 @@ void MainWindow::on_insertVideo_clicked()
     updateAudioSearchList();
     updateMuteListTable();
 
+    qDebug()<<"switching main";
     m_main_filepath = "joinResult.mp4";
 
     /* Create an engine thread */

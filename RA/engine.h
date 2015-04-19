@@ -25,6 +25,12 @@ public:
         m_datastorage = storage;
         PI = 3.142;
     }
+
+    Engine(QString filepath, dataStorage* storage,QString start_time_text,int start_time,int clip_duration, QString clip_filepath){
+        m_filepath = filepath;
+        m_datastorage = storage;
+        PI = 3.142;
+    }
     void insertVideo(QString start_time_text,int start_time,int clip_duration, QString clip_filepath);
     void undoInsertVideo(int join_list_index);
 
