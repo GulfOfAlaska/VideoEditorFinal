@@ -357,17 +357,21 @@ void Engine::insertVideo()
 void Engine::undoInsertVideo()
 {
     std::vector <trimDetail*> join_list = m_datastorage->getJoinList();
-    int duration_to_reduce = join_list[join_list_index]->getDuration()*(-1);
+    std::vector <trimDetail*> trim_list = m_datastorage->getTrimList();
+    std::vector <trimDetail*> mute_list = m_datastorage->getMuteList();
+    int duration_to_reduce = join_list[join_list.size()-1]->getDuration()*(-1);
     int main_video_duration = m_datastorage->getMainVideoDuration();
     int hr = main_video_duration/(1000*60*60);
     int min = (main_video_duration/(1000*60))%60;
     int sec = (main_video_duration/(1000))%60;
     int milisec = main_video_duration % 1000;
     int after_this_time = join_list[join_list.size()-1]->getStartTime();
+    int join_start_time = join_list[join_list.size()-1]->getStartTime();
+    int join_end_time = join_list[join_list.size()-1]->getEndTime();
     QString main_video_duration_text = QString::number(hr)+":"+QString::number(min)+":"+QString::number(sec)+"."+QString::number(milisec);
-    QString start_time_to_cut = join_list[join_list_index]->getStartTimeText();
-    QString end_time_to_cut = join_list[join_list_index]->getEndTimeText();
-    int clip_start_time = join_list[join_list_index]->getStartTime();
+    QString start_time_to_cut = join_list[join_list.size()-1]->getStartTimeText();
+    QString end_time_to_cut = join_list[join_list.size()-1]->getEndTimeText();
+    int clip_start_time = join_list[join_list.size()-1]->getStartTime();
 
     /*Cut from start to start_time_to_cut (clip a) */
     cutVideo("0:0:0",start_time_to_cut,"undoJoinA.mp4");
@@ -375,22 +379,22 @@ void Engine::undoInsertVideo()
     if(clip_start_time == 0)
     {
         /*Cut from  end_time_to_cut to main_video_duration (clip b) */
-        cutVideo(end_time_to_cut,main_video_duration_text,"undonejoinResult.mp4");
+        cutVideo(end_time_to_cut,main_video_duration_text,QString::number(m_undo_insert_number)+"undonejoinResult.mp4");
     }
 
     if(clip_start_time == main_video_duration)
     {
         /*Cut from  end_time_to_cut to main_video_duration (clip b) */
-        cutVideo("0:0:0",start_time_to_cut,"undonejoinResult.mp4");
+        cutVideo("0:0:0",start_time_to_cut,QString::number(m_undo_insert_number)+"undonejoinResult.mp4");
     }
 
     if(clip_start_time != main_video_duration && clip_start_time!= 0)
     {
         /*Cut from  end_time_to_cut to main_video_duration (clip b) */
-        cutVideo("0:0:0",start_time_to_cut,"undoJoinA.mp4");
+        cutVideo(end_time_to_cut,main_video_duration_text,"undoJoinB.mp4");
 
         /* Concatenate clip a and clip b */
-        concatenateVideo("undoJoinA.mp4","undoJoinB.mp4","undonejoinResult.mp4");
+        concatenateVideo("undoJoinA.mp4","undoJoinB.mp4",QString::number(m_undo_insert_number)+"undonejoinResult.mp4");
     }
 
     /* Decrease timing of all trims after insert start_time */
@@ -399,6 +403,34 @@ void Engine::undoInsertVideo()
     m_datastorage->increaseJoinTime(duration_to_reduce,after_this_time);
     /* Decrease timing of all mutes after insert start_time */
     m_datastorage->increaseMuteTime(duration_to_reduce,after_this_time);
+
+    for(int i=0;i<mute_list.size();i++)
+    {
+       if(mute_list[i]->getStartTime>join_start_time && mute_list[i]->getStartTime<join_end_time)
+       {
+           m_datastorage->deleteMuteDetails(i);
+       }
+       if(mute_list[i]->getEndTime>join_start_time && mute_list[i]->getEndTime<join_end_time)
+       {
+           m_datastorage->deleteMuteDetails(i);
+       }
+    }
+
+    for(int i=0;i<trim_list.size();i++)
+    {
+        if(trim_list[i]->getStartTime>join_start_time && trim_list[i]->getStartTime<join_end_time)
+        {
+            m_datastorage->deleteTrimDetails(i);
+        }
+        if(trim_list[i]->getEndTime>join_start_time && trim_list[i]->getEndTime<join_end_time)
+        {
+            m_datastorage->deleteTrimDetails(i);
+        }
+    }
+
+    m_datastorage->deleteJoinDetails(join_list.size()-1);
+
+    emit undoInsertFinished();
 }
 
 int Engine::numDigits(int num)
@@ -430,6 +462,8 @@ void Engine::SearchAudio()
     double *temp_buf; // Stores wav data read by libsnfile (stereo)
     double *sec_audio_sampledata_buffer; // Stores wav data read by libsnfile
     double *main_audio_sampledata_buffer; // Stores wav data read by libsnfile
+    int main_duration;
+    int sec_duration;
 
     /* Open the secondary WAV file with libsnfile sf_open */
     info.format = 0;
@@ -447,6 +481,7 @@ void Engine::SearchAudio()
     num_items = f*c;
     seekable = info.seekable;
     audio_duration = f/double(sr); // in seconds
+    sec_duration = audio_duration*1000;
 
     /* Tells mainwindow to update the console with these outputs */
     emit processUpdate("Frames = " + QString::number(info.frames));
@@ -720,6 +755,8 @@ void Engine::SearchAudio()
 
         }
         seg_num++;
+
+       /* if coefficient above threshold, use sec duration to get end */
     }
 
     free(temp_buf);

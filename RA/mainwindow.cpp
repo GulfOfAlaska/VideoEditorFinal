@@ -22,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent) :
     aplayer = new QMediaPlayer;
     joinPreviewVplayer = new QMediaPlayer;
     m_insert_number=0;
+    m_undo_insert_number=0;
 }
 
 MainWindow::~MainWindow()
@@ -587,16 +588,25 @@ void MainWindow::on_joinListTable_cellClicked(int row, int column)
 
 void MainWindow::on_insertVideoUndo_clicked()
 {
-    Engine*Eng =  new Engine(m_main_filepath,1,m_datastorage);
-    Eng->undoInsertVideo();
+    Engine *Eng =  new Engine(m_main_filepath,1,m_datastorage,m_undo_insert_number);
+    QThread * undo_insert_th = new QThread();
+    QObject::connect(undo_insert_th,SIGNAL(started()),Eng,SLOT(undoInsertVideo()));
+    QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
+    QObject::connect(Eng, SIGNAL(readFinished()),this, SLOT(initMainVideo()));
+    QObject::connect(Eng, SIGNAL(undoInsertFinished()),this, SLOT(initUndoInsertVideo()));
+    Eng->moveToThread(undo_insert_th);
+    undo_insert_th->start();
+}
 
+void MainWindow::initUndoInsertVideo()
+{
     updateJoinListTable();
     updateTrimListTable();
     updateAudioSearchList();
     updateMuteListTable();
 
-    m_main_filepath = "undonejoinResult.mp4";
-    Eng =  new Engine(m_main_filepath,1,m_datastorage);
+    m_main_filepath = QString::number(m_undo_insert_number)+"undonejoinResult.mp4";
+    Engine *Eng =  new Engine(m_main_filepath,1,m_datastorage);
     QThread * get_audio_data_th = new QThread();
     QObject::connect(get_audio_data_th,SIGNAL(started()),Eng,SLOT(GetData()));
     QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
@@ -604,6 +614,7 @@ void MainWindow::on_insertVideoUndo_clicked()
     QObject::connect(Eng, SIGNAL(readFinished()),this, SLOT(initMainVideo()));
     Eng->moveToThread(get_audio_data_th);
     get_audio_data_th->start();
+    m_undo_insert_number++;
 }
 
 void MainWindow::on_muteAudioPart_clicked()

@@ -211,7 +211,7 @@ void dataStorage::addJoinDetails(trimDetail *trimDetails)
 
 void dataStorage::deleteJoinDetails(int index)
 {
-    m_joinList.erase(m_trimList.begin() + index);
+    m_joinList.erase(m_joinList.begin() + index);
 }
 
  std::vector<trimDetail*> dataStorage::getJoinList()

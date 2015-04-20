@@ -26,6 +26,14 @@ public:
         PI = 3.142;
     }
 
+    Engine(QString filepath, int mainOrSecondary, dataStorage* storage, int undo_insert_number){
+        m_filepath = filepath;
+        m_mainOrSecondary = mainOrSecondary;
+        m_datastorage = storage;
+        PI = 3.142;
+        m_undo_insert_number=undo_insert_number;
+    }
+
     Engine(QString filepath, dataStorage* storage,int insert_number, QString start_time_text,int start_time,int clip_duration, QString clip_filepath){
         m_filepath = filepath;
         m_datastorage = storage;
@@ -38,7 +46,7 @@ public:
     }
 
     // Functions
-    void undoInsertVideo(int join_list_index);
+
 
 public slots:
     // Functions
@@ -49,6 +57,7 @@ public slots:
     void exportTrims();
     void exportMutes();
     void insertVideo();
+    void undoInsertVideo();
 
 
 signals:
@@ -62,6 +71,7 @@ signals:
     void finished();
     void readFinished();
     void insertFinished();
+    void undoInsertFinished();
 
 
 private:
@@ -80,6 +90,7 @@ private:
     int m_insert_clip_duration;
     QString m_insert_clip_filepath;
     int m_insert_number;
+    int m_undo_insert_number;
 
     // Functions
     int ConvertToWav(QString filepath); // Convert media file to wav format
