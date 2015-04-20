@@ -22,13 +22,11 @@ public:
 public slots:
     void updateVideoUiLabel(QImage *frame);
     void updateUiLabel(QString text);
-    void updateMainSpgmLabel(fftw_complex *fftout, int num_items);
-    void updateSecondarySpgmLabel(fftw_complex *fftout, int num_items);
-    void updateMainSWLabel(double *buf, int num_items);
-    void updateCrossCorrelationLabel(double *buf, int num_items);
     void updateAudioSearchList();
     void initInsertVideo();
     void initUndoInsertVideo();
+    void setAudioProgressBarMaxValue(int value);
+    void updateAudioProgressBarValue(int value);
 
 private slots:
     void on_actionOpen_triggered();
@@ -89,6 +87,8 @@ private:
     int m_insert_number;
     int m_undo_insert_number;
     QString m_join_video_filepath;
+    QPixmap *myPix;
+    QPainter *painter;
 };
 
 #endif // MAINWINDOW_H

@@ -406,11 +406,11 @@ void Engine::undoInsertVideo()
 
     for(int i=0;i<mute_list.size();i++)
     {
-       if(mute_list[i]->getStartTime>join_start_time && mute_list[i]->getStartTime<join_end_time)
+       if(mute_list[i]->getStartTime()>join_start_time && mute_list[i]->getStartTime()<join_end_time)
        {
            m_datastorage->deleteMuteDetails(i);
        }
-       if(mute_list[i]->getEndTime>join_start_time && mute_list[i]->getEndTime<join_end_time)
+       if(mute_list[i]->getEndTime()>join_start_time && mute_list[i]->getEndTime()<join_end_time)
        {
            m_datastorage->deleteMuteDetails(i);
        }
@@ -418,11 +418,11 @@ void Engine::undoInsertVideo()
 
     for(int i=0;i<trim_list.size();i++)
     {
-        if(trim_list[i]->getStartTime>join_start_time && trim_list[i]->getStartTime<join_end_time)
+        if(trim_list[i]->getStartTime()>join_start_time && trim_list[i]->getStartTime()<join_end_time)
         {
             m_datastorage->deleteTrimDetails(i);
         }
-        if(trim_list[i]->getEndTime>join_start_time && trim_list[i]->getEndTime<join_end_time)
+        if(trim_list[i]->getEndTime()>join_start_time && trim_list[i]->getEndTime()<join_end_time)
         {
             m_datastorage->deleteTrimDetails(i);
         }
@@ -462,8 +462,13 @@ void Engine::SearchAudio()
     double *temp_buf; // Stores wav data read by libsnfile (stereo)
     double *sec_audio_sampledata_buffer; // Stores wav data read by libsnfile
     double *main_audio_sampledata_buffer; // Stores wav data read by libsnfile
-    int main_duration;
     int sec_duration;
+    int main_duration = m_datastorage->getMainVideoDuration();
+    double coefficient;
+    bool in_segment = false;
+    double coefficient_threshold = 0.90;
+    int search_number=0;
+    double *temp_buf_frames;
 
     /* Open the secondary WAV file with libsnfile sf_open */
     info.format = 0;
@@ -560,7 +565,7 @@ void Engine::SearchAudio()
 
     while (num_items-num_read>=search_size)
     {
-
+        search_number++;
 
         /* Check if its the first segment */
         if(seg_num==0)
@@ -568,11 +573,6 @@ void Engine::SearchAudio()
             /* Read audio data into temp_buf */
             int items_read=(sf_read_double(sf,temp_buf,search_size));
             num_read+=items_read;
-
-            qDebug()<<"search size1: "<<search_size;
-            qDebug()<<"items_read1: "<<items_read;
-            qDebug()<<"num_read1: "<<num_read;
-
 
             /* Average out values */
             int index=0;
@@ -630,36 +630,33 @@ void Engine::SearchAudio()
             double denom = sqrt(sx*sy);
 
             /* Calcualte the coefficient */
-            double coefficient = max/denom;
+            coefficient = max/denom;
 
-            /* If not part of segment & coefficient below criteria, carry on searching */
-            /* If part of segment &  coefficient below criteria, end segment & save end timing as last searched time
-                        * And update search table */
+            qDebug()<<"max: "<<max;
+            qDebug()<<"denom: "<<denom;
             qDebug()<<"coefficient: "<<coefficient;
 
-
-            /* Free temp_buf */
-            free(temp_buf);
-
             /* If there are stuffs left to search */
-            if(num_items-search_size>0)
-            {
-                /* Change search size to 1/2 sec (samplerate/2) */
-                if(num_items-search_size>time_shift)
-                {
-                    search_size=time_shift;
-                }
-                else
-                {
-                    search_size = num_items-search_size;
-                }
+                         if(num_items-search_size>0)
+                         {
+                             /* Change search size to 1/2 sec (samplerate/2) */
+                             if(num_items-search_size>time_shift)
+                             {
+                                 search_size=time_shift;
+                             }
+                             else
+                             {
+                                 search_size = num_items-search_size;
+                             }
 
-                /* Reallocate size of temp_buf */
-                temp_buf = (double *) malloc(search_size*sizeof(double));
-            }
+                             /* Reallocate size of temp_buf */
+                             temp_buf = (double *) malloc(search_size*sizeof(double));
+                             temp_buf_frames = (double *) malloc(search_size/2*sizeof(double));
+                         }
         }
         else
         {
+
             /* Shift main_audio_sampledata_buffer by time_shift towards the left */
             for(int i=0;i<((window_size/2)-(time_shift/2));i++)
             {
@@ -670,17 +667,10 @@ void Engine::SearchAudio()
             int items_read=(sf_read_double(sf,temp_buf,search_size));
             num_read+=items_read;
 
-
-            qDebug()<<"search size2: "<<search_size;
-            qDebug()<<"items_read2: "<<items_read;
-            qDebug()<<"num_read2: "<<num_read;
-            qDebug()<<"segment number"<<seg_num;
-
-
             /* Average out values in temp_buf */
             int index=0;
             double average = 0.0;
-            double *temp_buf_frames = (double *) malloc(search_size/2*sizeof(double));
+
 
             for (int i = 0; i < items_read; i += 2)
             {
@@ -699,8 +689,6 @@ void Engine::SearchAudio()
                 main_audio_sampledata_buffer[i]=temp_buf_frames[temp_buf_index];
                 temp_buf_index++;
             }
-
-            free(temp_buf_frames);
 
             /* Perform cross correlation */
 
@@ -725,7 +713,7 @@ void Engine::SearchAudio()
                     max = corrResult[i];
                 }
             }
-            max=corrResult[0];
+
             /* Calculate the mean of the two series x[], y[] */
             double mean_main = 0;
             double mean_secondary = 0;
@@ -746,20 +734,59 @@ void Engine::SearchAudio()
             double denom = sqrt(sx*sy);
 
             /* Calcualte the coefficient */
-            double coefficient = max/denom;
+            coefficient = max/denom;
 
             /* If not part of segment & coefficient below criteria, carry on searching */
             /* If part of segment &  coefficient below criteria, end segment & save end timing as last searched time
                                     * And update search table */
+
+            qDebug()<<"max: "<<max;
+            qDebug()<<"denom: "<<denom;
             qDebug()<<"coefficient: "<<coefficient;
 
         }
-        seg_num++;
 
-       /* if coefficient above threshold, use sec duration to get end */
+       /* if in segment and coefficient below threshold, exit segment */
+       if(in_segment==true && coefficient < coefficient_threshold )
+       {
+            in_segment=false;
+       }
+       /* if not in segment and coefficient above threshold, use sec duration to get end, enter segment*/
+       if(in_segment==false && coefficient > coefficient_threshold )
+       {
+           int segmentStartTime = search_number * 500;
+           int segmentEndTime= segmentStartTime + sec_duration;
+
+           int end_hr = segmentEndTime/(1000*60*60);
+           int end_min = (segmentEndTime/(1000*60))%60;
+           int end_sec = (segmentEndTime/(1000))%60;
+           int end_milisec = segmentEndTime % 1000;
+           QString end_time = QString::number(end_hr)+":"+QString::number(end_min)+":"+QString::number(end_sec)+"."+QString::number(end_milisec);
+
+           int start_hr = segmentStartTime/(1000*60*60);
+           int start_min = (segmentStartTime/(1000*60))%60;
+           int start_sec = (segmentStartTime/(1000))%60;
+           int start_milisec = segmentStartTime % 1000;
+           QString start_time = QString::number(start_hr)+":"+QString::number(start_min)+":"+QString::number(start_sec)+"."+QString::number(start_milisec);
+
+           trimDetail *trim_detail = new trimDetail;
+           trim_detail->setName("");
+           trim_detail->setStartTime(segmentStartTime);
+           trim_detail->setEndTime(segmentEndTime);
+           trim_detail->setStartTimeText(start_time);
+           trim_detail->setEndTimeText(end_time);
+           m_datastorage->addAudioSearchResult(trim_detail);
+           in_segment=true;
+           emit updateAudioSearchTable();
+       }
+       emit updateAudioSamplesSearched(seg_num);
+       qDebug()<<seg_num;
+       seg_num++;
     }
-
+    emit updateAudioSamplesSearched((main_duration/1000)*2);
+    free(temp_buf_frames);
     free(temp_buf);
     free(main_audio_sampledata_buffer);
     free(sec_audio_sampledata_buffer);
+    sf_close(sf);
 }

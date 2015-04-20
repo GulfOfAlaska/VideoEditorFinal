@@ -49,67 +49,6 @@ void MainWindow::updateVideoUiLabel(QImage* frame)
     //    ui->videoScreenLabel->setPixmap(QPixmap::fromImage(*frame));
 }
 
-void MainWindow::updateCrossCorrelationLabel(double *buf, int num_items)
-{
-//    QPixmap *myPix = new QPixmap(1000,1000);
-//    QPainter *painter = new QPainter(myPix);
-//    painter->setPen(Qt::blue);
-
-//    for (int i = 0; i < num_items; i++)
-//    {
-//        QLineF line(double(i/200.0), 500.0, double(i/200.0), 500-(buf[i]*200.0));
-//        painter->drawLine(line);
-//    }
-//    ui->crossCorrelationLabel->setPixmap(*myPix);
-}
-
-void MainWindow::updateMainSpgmLabel(fftw_complex *fftout, int num_items)
-{
-    QPixmap *myPix = new QPixmap(300,300);
-    QPainter *painter = new QPainter(myPix);
-    painter->setPen(Qt::red);
-
-    for(int i=0;i<num_items;i++)
-    {
-        double top_y = sqrt(fftout[i][0]*fftout[i][0] + fftout[i][1]*fftout[i][1]);
-        QLineF line(double(i/200.0), 150.0, double(i/200.0), 150-(top_y*10000.0));
-        painter->drawLine(line);
-    }
-    ui->mainSpgmLabel->setPixmap(*myPix);
-
-}
-
-void MainWindow::updateSecondarySpgmLabel(fftw_complex *fftout, int num_items)
-{
-    QPixmap *myPix = new QPixmap(300,300);
-    QPainter *painter = new QPainter(myPix);
-    painter->setPen(Qt::red);
-
-    for(int i=0;i<num_items;i++)
-    {
-        double top_y = sqrt(fftout[i][0]*fftout[i][0] + fftout[i][1]*fftout[i][1]);
-        QLineF line(double(i/200.0), 150.0, double(i/200.0), 150-(top_y*10000.0));
-        painter->drawLine(line);
-    }
-    ui->secondarySpgmLabel->setPixmap(*myPix);
-
-}
-
-void MainWindow::updateMainSWLabel(double *buf, int num_items)
-{
-
-    QPixmap *myPix = new QPixmap(1000,1000);
-    QPainter *painter = new QPainter(myPix);
-    painter->setPen(Qt::blue);
-
-    for (int i = 0; i < num_items; i++)
-    {
-        QLineF line(double(i/200.0), 500.0, double(i/200.0), 500-(buf[i]*200.0));
-        painter->drawLine(line);
-    }
-    ui->mainSWLabel->setPixmap(*myPix);
-}
-
 void MainWindow::updateUiLabel(QString text)
 {
 
@@ -137,7 +76,6 @@ void MainWindow::on_actionOpen_triggered()
         QThread * get_audio_data_th = new QThread();
         QObject::connect(get_audio_data_th,SIGNAL(started()),Eng,SLOT(GetData()));
         QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
-        QObject::connect(Eng, SIGNAL(mainSWUpdate(double*, int)),this, SLOT(updateMainSWLabel(double*, int)),Qt::DirectConnection);
         QObject::connect(Eng, SIGNAL(readFinished()),this, SLOT(initMainVideo()));
         Eng->moveToThread(get_audio_data_th);
         get_audio_data_th->start();
@@ -170,15 +108,16 @@ void MainWindow::on_chooseAudio_clicked()
 
 void MainWindow::on_searchAudio_clicked()
 {
+    ui->audioProgressBar->setValue(0);
+    int main_duration = m_datastorage->getMainVideoDuration()/1000;
+    setAudioProgressBarMaxValue(main_duration*2);
     // Create a thread to get data from media file
     Engine*Eng =  new Engine(m_secondary_filepath,2,m_datastorage);
     QThread * cross_correlation_th = new QThread();
     QObject::connect(cross_correlation_th,SIGNAL(started()),Eng,SLOT(SearchAudio()));
     QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
     QObject::connect(Eng, SIGNAL(updateAudioSearchTable()),this, SLOT(updateAudioSearchList()));
-    //QObject::connect(Eng, SIGNAL(mainSpgmUpdate(fftw_complex*, int)),this, SLOT(updateMainSpgmLabel(fftw_complex*, int)),Qt::DirectConnection);
-    //QObject::connect(Eng, SIGNAL(secondarySpgmUpdate(fftw_complex*, int)),this, SLOT(updateSecondarySpgmLabel(fftw_complex*, int)),Qt::DirectConnection);
-    //QObject::connect(Eng, SIGNAL(corrUpdate(double*, int)),this, SLOT(updateCrossCorrelationLabel(double*, int)),Qt::DirectConnection);
+    QObject::connect(Eng, SIGNAL(updateAudioSamplesSearched(int)),this,SLOT(updateAudioProgressBarValue(int)));
     Eng->moveToThread(cross_correlation_th);
     cross_correlation_th->start();
 }
@@ -216,7 +155,6 @@ void MainWindow::updateSeekBar(qint64 position)
 
 void MainWindow::updateVideoDuration(qint64 duration)
 {
-    qDebug()<<"duration changed"<<duration;
     ui->seekBar->setMaximum(duration);
     m_datastorage->setMainVideoDuration(duration);
 }
@@ -574,7 +512,6 @@ void MainWindow::initInsertVideo()
     QThread * get_audio_data_th = new QThread();
     QObject::connect(get_audio_data_th,SIGNAL(started()),Eng,SLOT(GetData()));
     QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
-    QObject::connect(Eng, SIGNAL(mainSWUpdate(double*, int)),this, SLOT(updateMainSWLabel(double*, int)),Qt::DirectConnection);
     QObject::connect(Eng, SIGNAL(readFinished()),this, SLOT(initMainVideo()));
     Eng->moveToThread(get_audio_data_th);
     get_audio_data_th->start();
@@ -610,7 +547,6 @@ void MainWindow::initUndoInsertVideo()
     QThread * get_audio_data_th = new QThread();
     QObject::connect(get_audio_data_th,SIGNAL(started()),Eng,SLOT(GetData()));
     QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
-    QObject::connect(Eng, SIGNAL(mainSWUpdate(double*, int)),this, SLOT(updateMainSWLabel(double*, int)),Qt::DirectConnection);
     QObject::connect(Eng, SIGNAL(readFinished()),this, SLOT(initMainVideo()));
     Eng->moveToThread(get_audio_data_th);
     get_audio_data_th->start();
@@ -747,4 +683,14 @@ void MainWindow::on_undoMute_clicked()
 {
     m_datastorage->deleteMuteDetails(m_selected_mute_detail_index);
     updateMuteListTable();
+}
+
+void MainWindow::setAudioProgressBarMaxValue(int value)
+{
+    ui->audioProgressBar->setMaximum(value);
+}
+
+void MainWindow::updateAudioProgressBarValue(int value)
+{
+    ui->audioProgressBar->setValue(value);
 }

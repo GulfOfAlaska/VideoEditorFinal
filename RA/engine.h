@@ -72,6 +72,7 @@ signals:
     void readFinished();
     void insertFinished();
     void undoInsertFinished();
+    void updateAudioSamplesSearched(int searched_time);
 
 
 private:
