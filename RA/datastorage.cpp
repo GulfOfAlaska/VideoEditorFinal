@@ -238,7 +238,8 @@ void dataStorage::deleteJoinDetails(int index)
 
             QString new_start_time_text = QString::number(new_start_hr)+":"+QString::number(new_start_min)+":"+QString::number(new_start_sec)+"."+QString::number(new_start_milisec);
             QString new_end_time_text = QString::number(new_end_hr)+":"+QString::number(new_end_min)+":"+QString::number(new_end_sec)+"."+QString::number(new_end_milisec);
-
+            qDebug()<<"new start time: "<<new_start_time_text;
+            qDebug()<<"new end time: "<<new_end_time_text;
             m_trimList[i]->setStartTime(new_start_time);
             m_trimList[i]->setEndTime(new_end_time);
             m_trimList[i]->setStartTimeText(new_start_time_text);

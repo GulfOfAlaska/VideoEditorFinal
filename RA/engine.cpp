@@ -120,8 +120,6 @@ void Engine::exportTrims()
         int curStartTime = trim_list[trim_index]->getStartTime();
         QString curEndText = trim_list[trim_index]->getEndTimeText();
         int curEnd = trim_list[trim_index]->getEndTime();
-
-
         qDebug()<<"previousEndTime: "<<prevEnd;
 
         /* Cut from prevEnd to curStart */
@@ -202,6 +200,7 @@ void Engine::exportMutes()
     int min = (main_video_duration/(1000*60))%60;
     int sec = (main_video_duration/(1000))%60;
     int milisec = main_video_duration % 1000;
+    int main_mute_export_num=0;
     QString main_video_duration_text = QString::number(hr)+":"+QString::number(min)+":"+QString::number(sec)+"."+QString::number(milisec);
     qDebug()<<"total mutess: "<<total_mutes;
     while(total_mutes>0)
@@ -222,7 +221,7 @@ void Engine::exportMutes()
             cutVideo(prevEndText,curStartText,"muteExportA.mp4");
             cutVideo(curStartText,curEndText,"toBeMuted.mp4");
             muteVideo("toBeMuted.mp4","muted.mp4");
-            concatenateVideo("muteExportA.mp4","muted.mp4","mainMuteExport.mp4");
+            concatenateVideo("muteExportA.mp4","muted.mp4",QString::number(main_mute_export_num)+"mainMuteExport.mp4");
         }
         else
         {
@@ -230,7 +229,8 @@ void Engine::exportMutes()
             cutVideo(curStartText,curEndText,"toBeMuted.mp4");
             muteVideo("toBeMuted.mp4","muted.mp4");
             concatenateVideo("muted.mp4","secMuteExportA.mp4","secMuteExportB.mp4");
-            concatenateVideo("mainMuteExport.mp4","secMuteExportB.mp4","mainMuteExport.mp4");
+            concatenateVideo(QString::number(main_mute_export_num)+"mainMuteExport.mp4","secMuteExportB.mp4",QString::number(main_mute_export_num+1)+"mainMuteExport.mp4");
+            main_mute_export_num++;
         }
 
         total_mutes-=1;
@@ -244,7 +244,7 @@ void Engine::exportMutes()
     if(prevEnd!=main_video_duration && mute_list.size()>0)
     {
         cutVideo(prevEndText,main_video_duration_text,"secMuteExport.mp4");
-        concatenateVideo("mainMuteExport.mp4","secMuteExport.mp4","finalProduct.mp4");
+        concatenateVideo(QString::number(main_mute_export_num)+"mainMuteExport.mp4","secMuteExport.mp4","finalProduct.mp4");
     }
 }
 

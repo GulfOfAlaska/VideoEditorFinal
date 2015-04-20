@@ -278,21 +278,21 @@ void MainWindow::skipTrimmedParts(qint64 position)
 void MainWindow::muteSearchedParts(qint64 position)
 {
     std::vector <trimDetail*> mute_list = m_datastorage->getMuteList();
+    bool mute=false;
     for(int i=0; i<mute_list.size();i++)
     {
         int start = mute_list[i]->getStartTime();
         int end = mute_list[i]->getEndTime();
         if(position>=start && position<end)
         {
+            qDebug()<<"true";
             vplayer->setMuted(true);
+            mute=true;
         }
-        else
-        {
-            if(vplayer->isMuted())
-            {
-                vplayer->setMuted(false);
-            }
-        }
+    }
+    if(mute==false)
+    {
+       vplayer->setMuted(false);
     }
 }
 

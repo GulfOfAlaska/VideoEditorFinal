@@ -274,7 +274,7 @@
      <item row="1" column="0">
       <widget class="QTabWidget" name="tabWidget_3">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="tab_2">
         <attribute name="title">
@@ -284,7 +284,7 @@
          <item row="1" column="0">
           <widget class="QTabWidget" name="tabWidget_4">
            <property name="currentIndex">
-            <number>0</number>
+            <number>1</number>
            </property>
            <widget class="QWidget" name="tab_9">
             <attribute name="title">
@@ -648,6 +648,21 @@
                     <verstretch>0</verstretch>
                    </sizepolicy>
                   </property>
+                  <column>
+                   <property name="text">
+                    <string>Start</string>
+                   </property>
+                  </column>
+                  <column>
+                   <property name="text">
+                    <string>End</string>
+                   </property>
+                  </column>
+                  <column>
+                   <property name="text">
+                    <string>Note</string>
+                   </property>
+                  </column>
                  </widget>
                 </item>
                </layout>
