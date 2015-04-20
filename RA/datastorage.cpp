@@ -248,6 +248,11 @@ void dataStorage::deleteJoinDetails(int index)
     }
  }
 
+ void dataStorage::clearSearchDetails()
+ {
+     m_audioSearchList.clear();
+ }
+
  void dataStorage::increaseJoinTime(int duration, int after_this_timestamp)
  {
      for(int i=0;i<m_joinList.size();i++)

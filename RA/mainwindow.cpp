@@ -41,6 +41,7 @@ void MainWindow::initMainVideo()
     /* Initialise seeker range */
     qDebug()<<"duration: "<<vplayer->duration();
     ui->seekBar->setRange(0,vplayer->duration());
+    ui->videoProgressBar->setValue(100);
 }
 
 void MainWindow::updateVideoUiLabel(QImage* frame)
@@ -59,6 +60,8 @@ void MainWindow::updateUiLabel(QString text)
 
 void MainWindow::on_actionOpen_triggered()
 {
+    ui->videoProgressBar->setMaximum(100);
+     ui->videoProgressBar->setValue(0);
     /* Let user determine filepath */
     QString selfilter = tr("All files (*.*)");
     m_main_filepath = QFileDialog::getOpenFileName(
@@ -108,6 +111,14 @@ void MainWindow::on_chooseAudio_clicked()
 
 void MainWindow::on_searchAudio_clicked()
 {
+    /* Clear search results if any */
+    std::vector<trimDetail*> detail_list = m_datastorage->getAudioSearchList();
+
+    for(int i=0; i<detail_list.size(); i++)
+    {
+        m_datastorage->clearSearchDetails();
+    }
+
     ui->audioProgressBar->setValue(0);
     int main_duration = m_datastorage->getMainVideoDuration()/1000;
     setAudioProgressBarMaxValue(main_duration*2);
@@ -199,15 +210,18 @@ void MainWindow::on_cutVideo_clicked()
     int end_duration_millisec = end_hr*(1000*60*60) + end_min*(1000*60) + end_sec*(1000)+ end_milisec;
     qDebug()<<end_duration_millisec;
 
-    trimDetail *trim_detail = new trimDetail;
-    trim_detail->setName(name);
-    trim_detail->setStartTime(start_duration_millisec);
-    trim_detail->setEndTime(end_duration_millisec);
-    trim_detail->setStartTimeText(QString::number(start_hr)+":"+QString::number(start_min)+":"+QString::number(start_sec)+"."+QString::number(start_milisec));
-    trim_detail->setEndTimeText(QString::number(end_hr)+":"+QString::number(end_min)+":"+QString::number(end_sec)+"."+QString::number(end_milisec));
-    m_datastorage->addTrimDetails(trim_detail);
+    if(end_duration_millisec > start_duration_millisec)
+    {
+        trimDetail *trim_detail = new trimDetail;
+        trim_detail->setName(name);
+        trim_detail->setStartTime(start_duration_millisec);
+        trim_detail->setEndTime(end_duration_millisec);
+        trim_detail->setStartTimeText(QString::number(start_hr)+":"+QString::number(start_min)+":"+QString::number(start_sec)+"."+QString::number(start_milisec));
+        trim_detail->setEndTimeText(QString::number(end_hr)+":"+QString::number(end_min)+":"+QString::number(end_sec)+"."+QString::number(end_milisec));
+        m_datastorage->addTrimDetails(trim_detail);
 
-    updateTrimListTable();
+        updateTrimListTable();
+    }
 }
 
 void MainWindow::updateTrimListTable()
@@ -387,7 +401,10 @@ void MainWindow::on_audioSearchTable_cellClicked(int row, int column)
 
 void MainWindow::on_actionExport_triggered()
 {
-    if(m_main_filepath!="")
+    ui->videoProgressBar->setMaximum(100);
+     ui->videoProgressBar->setValue(0);
+
+    if (m_main_filepath != "")
     {
         Engine* Eng =  new Engine(m_main_filepath,1,m_datastorage);
         QThread * export_th = new QThread();
@@ -395,6 +412,7 @@ void MainWindow::on_actionExport_triggered()
         Eng->moveToThread(export_th);
         export_th->start();
     }
+    return;
 }
 
 void MainWindow::on_trimListTable_cellClicked(int row, int column)
@@ -463,38 +481,50 @@ void MainWindow::on_getInsertTime_clicked()
 
 void MainWindow::on_insertVideo_clicked()
 {
-    QString name = ui->insertNote->text();
-    QString start_time = ui->insertText->text();
-    int start_hr = start_time.split(":")[0].toInt();
-    int start_min = start_time.split(":")[1].toInt();
-    int start_sec = start_time.split(":")[2].toInt();
-    int start_milisec = start_time.split(":")[3].toInt();
-    int start_duration_millisec = start_hr*(1000*60*60) + start_min*(1000*60) + start_sec*(1000)+ start_milisec;
-    QString start_time_text = QString::number(start_hr)+":"+QString::number(start_min)+":"+QString::number(start_sec)+"."+QString::number(start_milisec);
+    if(m_join_video_filepath!="" && ui->insertText->text()!="" )
+    {
+        ui->videoProgressBar->setMaximum(100);
+        ui->videoProgressBar->setValue(0);
 
-    int end_duration_millisec = start_duration_millisec + joinPreviewVplayer->duration();
-    int end_hr = end_duration_millisec /(1000*60*60);
-    int end_min = (end_duration_millisec /(1000*60))%60;
-    int end_sec = (end_duration_millisec /(1000))%60;
-    int end_milisec = end_duration_millisec  % 1000;
-    QString end_time_text = QString::number(end_hr)+":"+QString::number(end_min)+":"+QString::number(end_sec)+"."+QString::number(end_milisec);
+        QString name = ui->insertNote->text();
+        QString start_time = ui->insertText->text();
+        int start_hr = start_time.split(":")[0].toInt();
+        int start_min = start_time.split(":")[1].toInt();
+        int start_sec = start_time.split(":")[2].toInt();
+        int start_milisec = start_time.split(":")[3].toInt();
+        int start_duration_millisec = start_hr*(1000*60*60) + start_min*(1000*60) + start_sec*(1000)+ start_milisec;
+        QString start_time_text = QString::number(start_hr)+":"+QString::number(start_min)+":"+QString::number(start_sec)+"."+QString::number(start_milisec);
+        ui->videoProgressBar->setValue(20);
 
-    trimDetail *trim_detail = new trimDetail;
-    trim_detail->setName(name);
-    trim_detail->setStartTime(start_duration_millisec);
-    trim_detail->setEndTime(end_duration_millisec);
-    trim_detail->setStartTimeText(start_time_text);
-    trim_detail->setEndTimeText(end_time_text);
-    trim_detail->setDuration(joinPreviewVplayer->duration());
-    m_datastorage->addJoinDetails(trim_detail);
+        int end_duration_millisec = start_duration_millisec + joinPreviewVplayer->duration();
+        int end_hr = end_duration_millisec /(1000*60*60);
+        int end_min = (end_duration_millisec /(1000*60))%60;
+        int end_sec = (end_duration_millisec /(1000))%60;
+        int end_milisec = end_duration_millisec  % 1000;
+        QString end_time_text = QString::number(end_hr)+":"+QString::number(end_min)+":"+QString::number(end_sec)+"."+QString::number(end_milisec);
 
-    Engine*Eng =  new Engine(m_main_filepath,m_datastorage,m_insert_number, start_time_text,start_duration_millisec,joinPreviewVplayer->duration(),m_join_video_filepath);
-    QThread * insert_vid_th = new QThread();
-    QObject::connect(insert_vid_th,SIGNAL(started()),Eng,SLOT(insertVideo()));
-    QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
-    QObject::connect(Eng, SIGNAL(insertFinished()),this, SLOT(initInsertVideo()));
-    Eng->moveToThread(insert_vid_th);
-    insert_vid_th->start();
+        ui->videoProgressBar->setValue(40);
+
+        trimDetail *trim_detail = new trimDetail;
+        trim_detail->setName(name);
+        trim_detail->setStartTime(start_duration_millisec);
+        trim_detail->setEndTime(end_duration_millisec);
+        trim_detail->setStartTimeText(start_time_text);
+        trim_detail->setEndTimeText(end_time_text);
+        trim_detail->setDuration(joinPreviewVplayer->duration());
+        m_datastorage->addJoinDetails(trim_detail);
+
+        ui->videoProgressBar->setValue(60);
+
+        Engine*Eng =  new Engine(m_main_filepath,m_datastorage,m_insert_number, start_time_text,start_duration_millisec,joinPreviewVplayer->duration(),m_join_video_filepath);
+        QThread * insert_vid_th = new QThread();
+        QObject::connect(insert_vid_th,SIGNAL(started()),Eng,SLOT(insertVideo()));
+        QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
+        QObject::connect(Eng, SIGNAL(insertFinished()),this, SLOT(initInsertVideo()));
+        QObject::connect(Eng, SIGNAL(updateVideoProgressBar(int)),this,SLOT(updateVideoProgressBarValue(int)));
+        Eng->moveToThread(insert_vid_th);
+        insert_vid_th->start();
+    }
 }
 
 void MainWindow::initInsertVideo()
@@ -525,14 +555,17 @@ void MainWindow::on_joinListTable_cellClicked(int row, int column)
 
 void MainWindow::on_insertVideoUndo_clicked()
 {
-    Engine *Eng =  new Engine(m_main_filepath,1,m_datastorage,m_undo_insert_number);
-    QThread * undo_insert_th = new QThread();
-    QObject::connect(undo_insert_th,SIGNAL(started()),Eng,SLOT(undoInsertVideo()));
-    QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
-    QObject::connect(Eng, SIGNAL(readFinished()),this, SLOT(initMainVideo()));
-    QObject::connect(Eng, SIGNAL(undoInsertFinished()),this, SLOT(initUndoInsertVideo()));
-    Eng->moveToThread(undo_insert_th);
-    undo_insert_th->start();
+    if(m_datastorage->getJoinList().size()!=0)
+    {
+        Engine *Eng =  new Engine(m_main_filepath,1,m_datastorage,m_undo_insert_number);
+        QThread * undo_insert_th = new QThread();
+        QObject::connect(undo_insert_th,SIGNAL(started()),Eng,SLOT(undoInsertVideo()));
+        QObject::connect(Eng, SIGNAL(processUpdate(QString)),this, SLOT(updateUiLabel(QString)),Qt::DirectConnection);
+        QObject::connect(Eng, SIGNAL(readFinished()),this, SLOT(initMainVideo()));
+        QObject::connect(Eng, SIGNAL(undoInsertFinished()),this, SLOT(initUndoInsertVideo()));
+        Eng->moveToThread(undo_insert_th);
+        undo_insert_th->start();
+    }
 }
 
 void MainWindow::initUndoInsertVideo()
@@ -570,14 +603,18 @@ void MainWindow::on_muteAudioPart_clicked()
     int end_milisec = end_time.split(":")[3].toInt();
     int end_duration_millisec = end_hr*(1000*60*60) + end_min*(1000*60) + end_sec*(1000)+ end_milisec;
 
-    trimDetail *trim_detail = new trimDetail;
-    trim_detail->setStartTime(start_duration_millisec);
-    trim_detail->setEndTime(end_duration_millisec);
-    trim_detail->setStartTimeText(QString::number(start_hr)+":"+QString::number(start_min)+":"+QString::number(start_sec)+"."+QString::number(start_milisec));
-    trim_detail->setEndTimeText(QString::number(end_hr)+":"+QString::number(end_min)+":"+QString::number(end_sec)+"."+QString::number(end_milisec));
-    m_datastorage->addMuteDetails(trim_detail);
+    if(start_duration_millisec < end_duration_millisec)
+    {
+        trimDetail *trim_detail = new trimDetail;
+        trim_detail->setStartTime(start_duration_millisec);
+        trim_detail->setEndTime(end_duration_millisec);
+        trim_detail->setStartTimeText(QString::number(start_hr)+":"+QString::number(start_min)+":"+QString::number(start_sec)+"."+QString::number(start_milisec));
+        trim_detail->setEndTimeText(QString::number(end_hr)+":"+QString::number(end_min)+":"+QString::number(end_sec)+"."+QString::number(end_milisec));
+        m_datastorage->addMuteDetails(trim_detail);
+        updateMuteListTable();
+    }
 
-    updateMuteListTable();
+
 }
 
 void MainWindow::updateMuteListTable()
@@ -693,4 +730,14 @@ void MainWindow::setAudioProgressBarMaxValue(int value)
 void MainWindow::updateAudioProgressBarValue(int value)
 {
     ui->audioProgressBar->setValue(value);
+}
+
+void MainWindow::setVideoProgressBarMaxValue(int value)
+{
+    ui->videoProgressBar->setMaximum(value);
+}
+
+void MainWindow::updateVideoProgressBarValue(int value)
+{
+    ui->videoProgressBar->setValue(value);
 }

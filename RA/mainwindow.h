@@ -27,6 +27,8 @@ public slots:
     void initUndoInsertVideo();
     void setAudioProgressBarMaxValue(int value);
     void updateAudioProgressBarValue(int value);
+    void setVideoProgressBarMaxValue(int value);
+    void updateVideoProgressBarValue(int value);
 
 private slots:
     void on_actionOpen_triggered();
@@ -89,6 +91,7 @@ private:
     QString m_join_video_filepath;
     QPixmap *myPix;
     QPainter *painter;
+    QString m_export_path;
 };
 
 #endif // MAINWINDOW_H

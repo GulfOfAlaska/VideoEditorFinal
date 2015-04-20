@@ -73,6 +73,7 @@ signals:
     void insertFinished();
     void undoInsertFinished();
     void updateAudioSamplesSearched(int searched_time);
+    void updateVideoProgressBar(int value);
 
 
 private:
@@ -92,6 +93,7 @@ private:
     QString m_insert_clip_filepath;
     int m_insert_number;
     int m_undo_insert_number;
+    QString m_export_path;
 
     // Functions
     int ConvertToWav(QString filepath); // Convert media file to wav format

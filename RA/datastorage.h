@@ -47,6 +47,7 @@ public:
     void deleteMuteDetails(int index);
     std::vector<trimDetail*> getMuteList();
     void addMuteDetails(trimDetail *trimDetails);
+    void clearSearchDetails();
 
 private:
     double *m_main_audio_buffer;

@@ -159,7 +159,7 @@ void Engine::exportTrims()
     }
 
     /* Concatenate with end of video */
-    if(prevEnd!=main_video_duration  && trim_list.size()>1 )
+    if(prevEnd!=main_video_duration  && trim_list.size()>0 && cut_from_start==false )
     {
         cutVideo(prevEndText,main_video_duration_text,"secTrimExport.mp4");
         concatenateVideo(QString::number(main_export_num)+"mainTrimExport.mp4","secTrimExport.mp4","finalProduct.mp4");
@@ -352,6 +352,7 @@ void Engine::insertVideo()
     m_datastorage->increaseMuteTime(clip_duration,start_time);
 
     emit insertFinished();
+    emit updateVideoProgressBar(80);
 }
 
 void Engine::undoInsertVideo()
